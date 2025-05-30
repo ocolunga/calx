@@ -1,4 +1,4 @@
-# Calendar CLI
+# Calinfo
 
 A command-line tool for displaying calendar information with beautiful terminal graphics.
 
@@ -24,7 +24,7 @@ uv pip install -e .
 Simply run:
 
 ```bash
-calendar-cli
+calinfo
 ```
 
 This will display a formatted panel with the current calendar information.
