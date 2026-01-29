@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-calinfo is a CLI tool for displaying calendar information with terminal graphics. It shows various calendar metrics like ISO week numbers, week numbers (Monday/Sunday start), day of year, biweek numbers, and more.
+calx (Calendar Expanded) is a CLI tool for displaying calendar information with terminal graphics. It shows various calendar metrics like ISO week numbers, week numbers (Monday/Sunday start), day of year, biweek numbers, and more.
 
 ## Development Commands
 
@@ -13,7 +13,7 @@ calinfo is a CLI tool for displaying calendar information with terminal graphics
 uv sync --group dev
 
 # Run the CLI
-uv run calinfo --help
+uv run calx --help
 
 # Type checking (ty)
 uv run ty check src/
@@ -27,7 +27,7 @@ uv run ruff format src/
 
 Single-module CLI application using Typer (CLI framework) and Rich (terminal output):
 
-- **src/calinfo/cli.py** - Main entry point, contains all logic
+- **src/calx/cli.py** - Main entry point, contains all logic
   - Helper functions for calendar calculations (`get_first_week_of_month`, `get_biweek_number`, `get_week_info`)
   - `display_calendar_info()` renders output using Rich tables
   - `show()` command with boolean flags for each calendar metric

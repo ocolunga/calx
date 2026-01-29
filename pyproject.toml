@@ -1,5 +1,5 @@
 [project]
-name = "calinfo"
+name = "calx"
 version = "0.1.0"
 description = "A CLI tool for displaying calendar information with terminal graphics"
 readme = "README.md"
@@ -8,7 +8,7 @@ dependencies = ["rich>=14.0.0", "typer>=0.15.2"]
 
 
 [project.scripts]
-calinfo = "calinfo.cli:app"
+calx = "calx.cli:app"
 
 [build-system]
 requires = ["hatchling"]
