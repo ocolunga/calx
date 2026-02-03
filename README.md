@@ -1,43 +1,38 @@
-# Calendar CLI
+# calx
 
-A command-line tool for displaying calendar information with beautiful terminal graphics.
+Calendar Expanded - A command-line tool for displaying calendar information with terminal graphics.
 
 ## Features
 
-- Display ISO week number
-- Show week number starting on Monday
-- Show week number starting on Sunday
-- Current year and day information
+- ISO week number
+- Week number (Monday/Sunday start)
+- Day of year, biweek number
 - Beautiful terminal formatting using Rich
 
 ## Installation
 
-1. Make sure you have Python 3.8+ installed
-2. Install the package using uv:
+```bash
+pip install calx
+```
+
+Or with uv:
 
 ```bash
-uv pip install -e .
+uv pip install calx
 ```
 
 ## Usage
 
-Simply run:
-
 ```bash
-calendar-cli
+calx
 ```
-
-This will display a formatted panel with the current calendar information.
 
 ## Development
 
-To set up the development environment:
-
-1. Clone the repository
-2. Install development dependencies:
-   ```bash
-   uv pip install -e ".[dev]"
-   ```
+```bash
+uv sync --group dev
+uv run calx --help
+```
 
 ## License
 
