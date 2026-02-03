@@ -1,0 +1,176 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to release (e.g., v0.1.0)'
+        required: true
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: ".python-version"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          # Use input tag for manual dispatch, otherwise use ref name
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Validate version matches pyproject.toml
+        run: |
+          EXPECTED="${{ steps.version.outputs.version }}"
+          ACTUAL=$(grep -E "^version\s*=" pyproject.toml | sed -E 's/.*"([^"]+)".*/\1/')
+
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "Error: Tag version ($EXPECTED) doesn't match pyproject.toml ($ACTUAL)"
+            exit 1
+          fi
+          echo "Version validated: $EXPECTED"
+
+      - name: Build package
+        run: uv build
+
+      - name: Publish to PyPI
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: uv publish
+
+      - name: Generate release notes
+        run: |
+          cat > release_notes.md << 'EOF'
+          ## Installation
+
+          ### Homebrew (recommended)
+          ```bash
+          brew tap ocolunga/calx
+          brew install calx
+          ```
+
+          ### pip
+          ```bash
+          pip install calx
+          ```
+
+          ### uv
+          ```bash
+          uv tool install calx
+          ```
+          EOF
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: "v${{ steps.version.outputs.version }}"
+          body_path: release_notes.md
+          files: |
+            dist/*.whl
+            dist/*.tar.gz
+
+  update-homebrew:
+    needs: release
+    runs-on: macos-latest
+
+    steps:
+      - name: Extract version from tag
+        id: version
+        run: |
+          TAG="${{ inputs.tag || github.ref_name }}"
+          VERSION="${TAG#v}"
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Wait for PyPI availability
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Waiting for calx==$VERSION to be available on PyPI..."
+          for i in {1..30}; do
+            if curl -s "https://pypi.org/pypi/calx/$VERSION/json" | grep -q '"version"'; then
+              echo "Package available on PyPI"
+              exit 0
+            fi
+            echo "Waiting for PyPI... ($i/30)"
+            sleep 10
+          done
+          echo "Warning: Timed out waiting for PyPI, continuing anyway..."
+
+      - name: Set up Homebrew
+        uses: Homebrew/actions/setup-homebrew@master
+
+      - name: Get PyPI package URL and SHA256
+        id: pypi
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Fetch package info from PyPI
+          PYPI_JSON=$(curl -s "https://pypi.org/pypi/calx/$VERSION/json")
+
+          # Extract the sdist (source distribution) URL and SHA256
+          URL=$(echo "$PYPI_JSON" | python3 -c "import sys, json; urls = json.load(sys.stdin)['urls']; sdist = next(u for u in urls if u['packagetype'] == 'sdist'); print(sdist['url'])")
+          SHA256=$(echo "$PYPI_JSON" | python3 -c "import sys, json; urls = json.load(sys.stdin)['urls']; sdist = next(u for u in urls if u['packagetype'] == 'sdist'); print(sdist['digests']['sha256'])")
+
+          echo "url=$URL" >> $GITHUB_OUTPUT
+          echo "sha256=$SHA256" >> $GITHUB_OUTPUT
+          echo "Package URL: $URL"
+          echo "SHA256: $SHA256"
+
+      - name: Tap and update formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          SHA256="${{ steps.pypi.outputs.sha256 }}"
+          URL="${{ steps.pypi.outputs.url }}"
+
+          # Tap the repo (installs to proper Homebrew location)
+          brew tap ocolunga/calx
+
+          # Get the tap directory
+          TAP_DIR="$(brew --prefix)/Library/Taps/ocolunga/homebrew-calx"
+          FORMULA="$TAP_DIR/Formula/calx.rb"
+
+          # Update URL and SHA256
+          sed -i '' "s|url \".*\"|url \"${URL}\"|" "$FORMULA"
+          sed -i '' "s|sha256 \".*\"|sha256 \"${SHA256}\"|" "$FORMULA"
+
+          echo "Updated formula:"
+          cat "$FORMULA"
+
+      - name: Update Python resource dependencies
+        run: |
+          echo "Updating Python resources..."
+          brew update-python-resources ocolunga/calx/calx
+          echo "Resources updated successfully"
+
+      - name: Commit and push
+        env:
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+        run: |
+          TAP_DIR="$(brew --prefix)/Library/Taps/ocolunga/homebrew-calx"
+          cd "$TAP_DIR"
+
+          # Configure git with token for push
+          git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/ocolunga/homebrew-calx.git"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add Formula/calx.rb
+          git diff --staged --quiet || git commit -m "Update calx to ${{ steps.version.outputs.version }}"
+          git push
