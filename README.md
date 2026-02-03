@@ -27,11 +27,20 @@ Calendar Expanded -- a CLI tool for displaying calendar information with termina
 
 ## Installation
 
+### Homebrew (recommended)
+
+```bash
+brew tap ocolunga/calx
+brew install calx-cli
+```
+
+### pip
+
 ```bash
 pip install calx-cli
 ```
 
-Or with [uv](https://docs.astral.sh/uv/):
+### uv
 
 ```bash
 uv pip install calx-cli
