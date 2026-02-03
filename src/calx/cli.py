@@ -6,7 +6,6 @@ from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich import box
-from typing import Optional
 
 from calx.calendar_views import (
     compute_week_number,
@@ -69,14 +68,12 @@ def display_default_view(first_day: int = 1, min_days: int = 4):
     console.print(layout)
 
 
-def resolve_week_format(
-    start: Optional[int],
-    simple: bool,
+def resolve_shortcut_format(
     simple_sunday: bool,
     iso_sunday: bool,
     simple_monday: bool,
 ) -> tuple[int, int]:
-    """Resolve week format flags into (first_day, min_days).
+    """Resolve shortcut flags into (first_day, min_days).
 
     Returns:
         Tuple of (first_day, min_days) where first_day is 1=Mon...7=Sun
@@ -86,11 +83,6 @@ def resolve_week_format(
     if shortcuts > 1:
         console.print("[red]Error: Only one shortcut flag allowed[/red]")
         raise typer.Exit(1)
-    if shortcuts > 0 and (start is not None or simple):
-        console.print(
-            "[red]Error: Cannot combine shortcuts with --start/--simple[/red]"
-        )
-        raise typer.Exit(1)
 
     if simple_sunday:
         return 7, 1
@@ -99,9 +91,7 @@ def resolve_week_format(
     elif simple_monday:
         return 1, 1
     else:
-        first_day = start if start is not None else 1
-        min_days = 1 if simple else 4
-        return first_day, min_days
+        return 1, 4
 
 
 @app.callback(invoke_without_command=True)
@@ -111,12 +101,6 @@ def main(
         False, "-m", "--month", help="Show 3 months (previous, current, next)"
     ),
     year: bool = typer.Option(False, "-y", "--year", help="Show full year calendar"),
-    start: Optional[int] = typer.Option(
-        None, "--start", min=1, max=7, help="First day of week (1=Mon...7=Sun)"
-    ),
-    simple: bool = typer.Option(
-        False, "--simple", help="Simple week numbering (Jan 1 = week 1)"
-    ),
     simple_sunday: bool = typer.Option(
         False, "--simple-sunday", help="Sunday start, simple weeks"
     ),
@@ -131,8 +115,8 @@ def main(
     if ctx.invoked_subcommand is not None:
         return
 
-    first_day, min_days = resolve_week_format(
-        start, simple, simple_sunday, iso_sunday, simple_monday
+    first_day, min_days = resolve_shortcut_format(
+        simple_sunday, iso_sunday, simple_monday
     )
     today = date.today()
 
@@ -144,6 +128,38 @@ def main(
         )
     else:
         display_default_view(first_day, min_days)
+
+
+@app.command()
+def show(
+    day: int = typer.Option(
+        1, "-d", "--day", min=1, max=7, help="First day of week (1=Mon...7=Sun)"
+    ),
+    simple: bool = typer.Option(
+        False, "-s", "--simple", help="Simple week numbering (Jan 1 = week 1)"
+    ),
+    iso: bool = typer.Option(False, "-i", "--iso", help="ISO week numbering"),
+    month: bool = typer.Option(
+        False, "-m", "--month", help="Show 3 months (previous, current, next)"
+    ),
+    year: bool = typer.Option(False, "-y", "--year", help="Show full year calendar"),
+):
+    """Show calendar with custom week configuration."""
+    if simple and iso:
+        console.print("[red]Error: --simple and --iso are mutually exclusive[/red]")
+        raise typer.Exit(1)
+
+    min_days = 1 if simple else 4
+    today = date.today()
+
+    if year:
+        console.print(render_year(today.year, today, day, min_days))
+    elif month:
+        console.print(
+            render_three_months(today.year, today.month, today, day, min_days)
+        )
+    else:
+        display_default_view(day, min_days)
 
 
 if __name__ == "__main__":
