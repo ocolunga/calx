@@ -9,6 +9,7 @@ from rich.panel import Panel
 from rich import box
 
 from calx.calendar_views import (
+    compute_biweek_number,
     compute_week_number,
     render_month_calendar,
     render_three_months,
@@ -50,7 +51,10 @@ def create_info_table(first_day: int = 1, min_days: int = 4) -> Table:
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="green")
 
+    biweek = compute_biweek_number(week)
+
     table.add_row("Week", str(week))
+    table.add_row("Biweek", str(biweek))
     table.add_row("Year", str(today.year))
     table.add_row("Day", today.strftime("%A"))
     table.add_row("Day of Year", str(day_of_year))
@@ -90,6 +94,15 @@ def display_default_view(first_day: int = 1, min_days: int = 4):
     console.print(layout)
 
 
+def version_callback(value: bool):
+    """Print version and exit."""
+    if value:
+        from calx import __version__
+
+        console.print(f"calx {__version__}")
+        raise typer.Exit()
+
+
 def resolve_shortcut_format(
     simple_sunday: bool,
     iso_sunday: bool,
@@ -119,6 +132,14 @@ def resolve_shortcut_format(
 @app.callback(invoke_without_command=True)
 def main(
     ctx: typer.Context,
+    version: bool = typer.Option(
+        False,
+        "-v",
+        "--version",
+        help="Show version and exit",
+        callback=version_callback,
+        is_eager=True,
+    ),
     month: bool = typer.Option(
         False, "-m", "--month", help="Show 3 months (previous, current, next)"
     ),

@@ -63,6 +63,11 @@ def compute_week_number(d: date, first_day: int = 1, min_days: int = 4) -> int:
     return week
 
 
+def compute_biweek_number(week: int) -> int:
+    """Compute biweek number from a week number (for invoicing periods)."""
+    return (week + 1) // 2
+
+
 def render_month_calendar(
     year: int,
     month: int,
@@ -91,25 +96,29 @@ def render_month_calendar(
         table.add_column(justify="right", style="dim")
     for _ in range(7):
         table.add_column(justify="right", width=2)
+    if show_week_numbers:
+        table.add_column(justify="right", style="dim")
 
     day_names = get_day_names(first_day)
     header = [Text(d, style="bold cyan") for d in day_names]
     if show_week_numbers:
-        table.add_row("", *header)
+        table.add_row("", *header, "")
     else:
         table.add_row(*header)
 
+    seen_biweeks: set[int] = set()
+
     for week in weeks:
         row: list[Text | str] = []
+        week_num = None
 
         if show_week_numbers:
-            week_num = None
             for day in week:
                 if day.month == month:
                     week_num = compute_week_number(day, first_day, min_days)
                     break
             row.append(
-                Text(str(week_num) if week_num is not None else "", style="dim yellow")
+                Text(f"W{week_num}" if week_num is not None else "", style="dim yellow")
             )
 
         for day in week:
@@ -119,6 +128,16 @@ def render_month_calendar(
                 row.append(Text(str(day.day), style="bold reverse"))
             else:
                 row.append(Text(str(day.day)))
+
+        if show_week_numbers and week_num is not None:
+            bw = compute_biweek_number(week_num)
+            if bw not in seen_biweeks:
+                row.append(Text(f"B{bw}", style="dim magenta"))
+                seen_biweeks.add(bw)
+            else:
+                row.append("")
+        elif show_week_numbers:
+            row.append("")
 
         table.add_row(*row)
 
