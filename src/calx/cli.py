@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import calendar
 import typer
 from datetime import date
 from rich.console import Console
@@ -9,7 +10,7 @@ from rich import box
 
 from calx.calendar_views import (
     compute_week_number,
-    render_month_with_title,
+    render_month_calendar,
     render_three_months,
     render_year,
 )
@@ -18,6 +19,25 @@ console = Console()
 app = typer.Typer(
     help="A CLI tool for displaying calendar information with terminal graphics"
 )
+
+
+DAY_NAMES = {
+    1: "Monday",
+    2: "Tuesday",
+    3: "Wednesday",
+    4: "Thursday",
+    5: "Friday",
+    6: "Saturday",
+    7: "Sunday",
+}
+
+
+def get_view_label(first_day: int, min_days: int) -> str:
+    """Return a human-readable label for the week-numbering scheme."""
+    if first_day == 1 and min_days == 4:
+        return "ISO Week"
+    style = "Simple" if min_days == 1 else "ISO-like"
+    return f"{DAY_NAMES[first_day]} {style}"
 
 
 def create_info_table(first_day: int = 1, min_days: int = 4) -> Table:
@@ -47,19 +67,21 @@ def display_default_view(first_day: int = 1, min_days: int = 4):
     layout.add_column()
 
     info_table = create_info_table(first_day, min_days)
+    view_label = get_view_label(first_day, min_days)
     info_panel = Panel(
         info_table,
-        title="[bold blue]Calendar Info[/bold blue]",
+        title=f"[bold blue]{view_label}[/bold blue]",
         border_style="blue",
         padding=(1, 2),
     )
 
-    month_cal = render_month_with_title(
+    month_name = calendar.month_name[today.month]
+    month_cal = render_month_calendar(
         today.year, today.month, today, True, first_day, min_days
     )
     cal_panel = Panel(
         month_cal,
-        title="[bold blue]Calendar[/bold blue]",
+        title=f"[bold blue]{month_name} {today.year}[/bold blue]",
         border_style="blue",
         padding=(1, 2),
     )
