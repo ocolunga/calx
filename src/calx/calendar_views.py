@@ -118,7 +118,7 @@ def render_month_calendar(
                     week_num = compute_week_number(day, first_day, min_days)
                     break
             row.append(
-                Text(str(week_num) if week_num is not None else "", style="dim yellow")
+                Text(f"W{week_num}" if week_num is not None else "", style="dim yellow")
             )
 
         for day in week:
