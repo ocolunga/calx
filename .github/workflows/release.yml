@@ -64,17 +64,17 @@ jobs:
           ### Homebrew (recommended)
           ```bash
           brew tap ocolunga/calx
-          brew install calx
+          brew install calx-cli
           ```
 
           ### pip
           ```bash
-          pip install calx
+          pip install calx-cli
           ```
 
           ### uv
           ```bash
-          uv tool install calx
+          uv tool install calx-cli
           ```
           EOF
 
@@ -103,9 +103,9 @@ jobs:
       - name: Wait for PyPI availability
         run: |
           VERSION="${{ steps.version.outputs.version }}"
-          echo "Waiting for calx==$VERSION to be available on PyPI..."
+          echo "Waiting for calx-cli==$VERSION to be available on PyPI..."
           for i in {1..30}; do
-            if curl -s "https://pypi.org/pypi/calx/$VERSION/json" | grep -q '"version"'; then
+            if curl -s "https://pypi.org/pypi/calx-cli/$VERSION/json" | grep -q '"version"'; then
               echo "Package available on PyPI"
               exit 0
             fi
@@ -122,7 +122,7 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           # Fetch package info from PyPI
-          PYPI_JSON=$(curl -s "https://pypi.org/pypi/calx/$VERSION/json")
+          PYPI_JSON=$(curl -s "https://pypi.org/pypi/calx-cli/$VERSION/json")
 
           # Extract the sdist (source distribution) URL and SHA256
           URL=$(echo "$PYPI_JSON" | python3 -c "import sys, json; urls = json.load(sys.stdin)['urls']; sdist = next(u for u in urls if u['packagetype'] == 'sdist'); print(sdist['url'])")
@@ -144,7 +144,7 @@ jobs:
 
           # Get the tap directory
           TAP_DIR="$(brew --prefix)/Library/Taps/ocolunga/homebrew-calx"
-          FORMULA="$TAP_DIR/Formula/calx.rb"
+          FORMULA="$TAP_DIR/Formula/calx-cli.rb"
 
           # Update URL and SHA256
           sed -i '' "s|url \".*\"|url \"${URL}\"|" "$FORMULA"
@@ -156,7 +156,7 @@ jobs:
       - name: Update Python resource dependencies
         run: |
           echo "Updating Python resources..."
-          brew update-python-resources ocolunga/calx/calx
+          brew update-python-resources ocolunga/calx/calx-cli
           echo "Resources updated successfully"
 
       - name: Commit and push
@@ -171,6 +171,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          git add Formula/calx.rb
-          git diff --staged --quiet || git commit -m "Update calx to ${{ steps.version.outputs.version }}"
+          git add Formula/calx-cli.rb
+          git diff --staged --quiet || git commit -m "Update calx-cli to ${{ steps.version.outputs.version }}"
           git push

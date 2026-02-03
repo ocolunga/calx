@@ -1,5 +1,5 @@
 [project]
-name = "calx"
+name = "calx-cli"
 version = "0.1.0"
 description = "A CLI tool for displaying calendar information with terminal graphics"
 readme = "README.md"
