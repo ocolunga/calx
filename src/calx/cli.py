@@ -1,12 +1,18 @@
 #!/usr/bin/env python3
 
 import typer
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich import box
 from typing import Optional
+
+from calx.calendar_views import (
+    render_month_with_title,
+    render_three_months,
+    render_year,
+)
 
 console = Console()
 app = typer.Typer(
@@ -37,9 +43,7 @@ def get_week_info():
     monday_week = (today - timedelta(days=today.weekday())).isocalendar()[1]
 
     # Calculate week starting Sunday
-    sunday_week = (
-        today - timedelta(days=(today.weekday() + 1) % 7)
-    ).isocalendar()[1]
+    sunday_week = (today - timedelta(days=(today.weekday() + 1) % 7)).isocalendar()[1]
 
     return {
         "iso_week": iso_week[1],
@@ -53,14 +57,14 @@ def get_week_info():
     }
 
 
-def display_calendar_info(
+def create_info_table(
     show_first_week: bool = True,
     show_day_of_year: bool = True,
     show_biweek: bool = True,
-):
+) -> Table:
+    """Create the calendar info table without panel wrapper."""
     week_info = get_week_info()
 
-    # Create a table for the week information
     table = Table(box=box.ROUNDED, show_header=False, padding=(0, 1))
     table.add_column("Property", style="cyan")
     table.add_column("Value", style="green")
@@ -71,13 +75,21 @@ def display_calendar_info(
     table.add_row("Year", str(week_info["year"]))
     table.add_row("Current Day", week_info["day_of_week"])
     if show_first_week:
-        table.add_row(
-            "First Week of Month", str(week_info["first_week_of_month"])
-        )
+        table.add_row("First Week of Month", str(week_info["first_week_of_month"]))
     if show_day_of_year:
         table.add_row("Day of Year", str(week_info["day_of_year"]))
     if show_biweek:
         table.add_row("Biweek Number", str(week_info["biweek"]))
+
+    return table
+
+
+def display_calendar_info(
+    show_first_week: bool = True,
+    show_day_of_year: bool = True,
+    show_biweek: bool = True,
+):
+    table = create_info_table(show_first_week, show_day_of_year, show_biweek)
 
     # Create a panel with the table
     panel = Panel(
@@ -88,6 +100,59 @@ def display_calendar_info(
     )
 
     console.print(panel)
+
+
+def display_default_view():
+    """Display info table and current month calendar side-by-side."""
+    today = date.today()
+
+    # Create side-by-side layout
+    layout = Table.grid(padding=(0, 2))
+    layout.add_column()
+    layout.add_column()
+
+    # Info panel
+    info_table = create_info_table()
+    info_panel = Panel(
+        info_table,
+        title="[bold blue]Calendar Information[/bold blue]",
+        border_style="blue",
+        padding=(1, 2),
+    )
+
+    # Calendar panel
+    month_cal = render_month_with_title(today.year, today.month, today)
+    cal_panel = Panel(
+        month_cal,
+        title="[bold blue]Calendar[/bold blue]",
+        border_style="blue",
+        padding=(1, 2),
+    )
+
+    layout.add_row(info_panel, cal_panel)
+    console.print(layout)
+
+
+@app.callback(invoke_without_command=True)
+def main(
+    ctx: typer.Context,
+    month: bool = typer.Option(
+        False, "-m", "--month", help="Show 3 months (previous, current, next)"
+    ),
+    year: bool = typer.Option(False, "-y", "--year", help="Show full year calendar"),
+):
+    """Display calendar information with terminal graphics."""
+    if ctx.invoked_subcommand is not None:
+        return
+
+    today = date.today()
+
+    if year:
+        console.print(render_year(today.year, today))
+    elif month:
+        console.print(render_three_months(today.year, today.month, today))
+    else:
+        display_default_view()
 
 
 @app.command()
@@ -104,9 +169,7 @@ def show(
     first_week: Optional[bool] = typer.Option(
         True, help="Show first week number of the current month"
     ),
-    day_of_year: Optional[bool] = typer.Option(
-        True, help="Show day of year (1-366)"
-    ),
+    day_of_year: Optional[bool] = typer.Option(True, help="Show day of year (1-366)"),
     biweek: Optional[bool] = typer.Option(
         True, help="Show biweek number (1-26 or 27 in leap years)"
     ),
